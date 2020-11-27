@@ -7,6 +7,10 @@ Save file `credentials.json` in the root folder of the project
 
 Clone Project
 
+Modify
+`git clone https://github.com/munir131/attachment-downloader`
+
+Original
 `git clone https://github.com/munir131/attachment-downloader`
 
 Install dependencies

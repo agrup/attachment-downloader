@@ -5,6 +5,7 @@ const inquirer = require('inquirer');
 const path = require('path');
 const ora = require('ora');
 
+
 const AuthFetcher = require('./lib/googleAPIWrapper');
 const { time } = require('console');
 let pageCounter = 1;
@@ -55,7 +56,6 @@ function main(auth, gmailInstance) {
       return fetchMailsByMailIds(auth, mailList);
     })
     .then((mails) => {
-
       coredata.attachments = pluckAllAttachments(mails);
       return fetchAndSaveAttachments(auth, coredata.attachments);
     })
@@ -164,7 +164,13 @@ function fetchAndSaveAttachment(auth, attachment) {
     });
   })
     .then((content) => {
-      var fileName = path.resolve(__dirname, 'files', attachment.name);
+      
+      var re = /[^< ]+(?=>)/g;
+      var dir = 'files/'+attachment.adress.match(re)[0].replace(/[^a-zA-Z0-9]/g,'_');
+      if (!fs.existsSync(dir)){
+        fs.mkdirSync(dir);
+      }
+      var fileName = path.resolve(__dirname, dir, attachment.name.replace(/[^a-zA-Z0-9]/g,'_'));
       return isFileExist(fileName)
         .then((isExist) => {
           if (isExist) {
@@ -175,6 +181,11 @@ function fetchAndSaveAttachment(auth, attachment) {
         .then((availableFileName) => {
           return saveFile(availableFileName, content);
         })
+        .catch(e => {
+          console.log(e);
+          console.log(dir);
+          console.log(attachment.name.replace(/[^a-zA-Z0-9]/g,'_'));
+        });
     })
 }
 
@@ -213,10 +224,15 @@ function pluckAllAttachments(mails) {
       if (!p.body || !p.body.attachmentId) {
         return undefined;
       }
+      //console.log(m.data.id);
+      //console.log(m.data.payload.headers);
+      const adress = m.data.payload.headers.filter(header => header.name == 'From')[0];
+      //console.log(adress.value);
       const attachment = {
         mailId: m.data.id,
         name: p.filename,
-        id: p.body.attachmentId
+        id: p.body.attachmentId,
+        adress:adress.value
       };
       return attachment;
     })
@@ -347,8 +363,10 @@ async function fetchMailsByMailIds(auth, mailList) {
     counter++;
     processed++;
     if (counter === 100) {
+      console.log('llego a los 100')
       mails = await Promise.all(promises);
       results = results.concat(mails)
+
       promises = [];
       counter = 0;
       spinner.text = processed + " mails fetched"
